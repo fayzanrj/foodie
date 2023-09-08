@@ -1,67 +1,45 @@
 import {
   ActivityIndicator,
   Image,
-  Platform,
-  PlatformColor,
   Pressable,
-  StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import MasonryList from "@react-native-seoul/masonry-list";
-import { mealData } from "../constants";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
-import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
-import { CachedImage } from "../helper/image";
+import Animated, { FadeInRight } from "react-native-reanimated";
+import initialRecipes from "../constants/initialRecipes";
 
 const Recipe = ({
   setRecipes,
   recipes,
-  selectedCategory,
+  isDarkMode,
   isloading,
-  setIsLoading
+  setIsLoading,
 }) => {
-
   const nav = useNavigation();
 
+  // GETTING RANDOM RECIPE FUNCTION
   const getRandomRecpies = async () => {
-    const response = await axios(
-      "https://themealdb.com/api/json/v1/1/filter.php?a=Indian"
-    );
-    if (response && response.data) {
-      setRecipes(response.data.meals);
-      setIsLoading(false);
-    }
+    setRecipes(initialRecipes)
+    setIsLoading(false);
   };
 
+  //
   useEffect(() => {
     getRandomRecpies();
   }, []);
 
-  const getSelectedCategoryRecipe = async () => {
-    setIsLoading(true);
-    const response = await axios(
-      `https://themealdb.com/api/json/v1/1/filter.php?c=${selectedCategory}`
-    );
-    if (response && response.data) {
-      await setRecipes(response.data.meals);
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    getSelectedCategoryRecipe();
-  }, [selectedCategory]);
-
+  // determining number of columns
   const numofCol = useWindowDimensions().fontScale <= 1 ? 2 : 1;
-  
+
   return (
     <View
       style={{
@@ -70,24 +48,27 @@ const Recipe = ({
         marginTop: "2%",
       }}
     >
+      {/* RECIPE HEADING */}
       <Text
         style={{
           fontSize: hp(3),
           marginBottom: "2%",
           alignSelf: "flex-start",
           paddingLeft: 10,
+          color: isDarkMode ? "white" : "black",
         }}
       >
         Recipes
       </Text>
       {isloading ? (
+        // LOADING ICON
         <View style={{ height: "100%", justifyContent: "center" }}>
           <ActivityIndicator size={"large"} />
         </View>
       ) : (
+        // RECIPE LIST
         recipes && (
           <MasonryList
-            // onEndReachedThreshold={1}
             keyExtractor={(item) => item.id}
             refreshControl={false}
             horizontal={true}
@@ -97,7 +78,12 @@ const Recipe = ({
             data={recipes}
             numColumns={numofCol}
             renderItem={({ item, i }) => (
-              <RecipeCard meal={item} nav={nav} index={i} />
+              <RecipeCard
+                meal={item}
+                nav={nav}
+                index={i}
+                isDarkMode={isDarkMode}
+              />
             )}
           />
         )
@@ -106,10 +92,16 @@ const Recipe = ({
   );
 };
 
-export default Recipe;
-
-const RecipeCard = ({ meal, index, nav }) => {
+// RECIPE CARD (RECIPE LISTT ITEM)
+const RecipeCard = React.memo(({ meal, index, nav, isDarkMode }) => {
   const isEven = index % 2 == 0;
+
+  // PROPS TO PASS RECIPE DETAILS SCREEN
+  const newProps = {
+    meal: meal,
+    isDarkMode: isDarkMode,
+  };
+
   return (
     <Animated.View
       entering={FadeInRight.delay(index * 100)
@@ -123,19 +115,19 @@ const RecipeCard = ({ meal, index, nav }) => {
           paddingLeft: isEven ? 0 : 8,
           marginHorizontal: 10,
         }}
-        onPress={() => nav.navigate("RecipeDetails", {...meal})}
+        onPress={() => nav.navigate("RecipeDetails", { ...newProps })}
       >
-        <CachedImage
-        // sharedTransitionTag={meal.strMeal}
-          uri={meal.strMealThumb}
+        {/* RECIPE IMAGE */}
+        <Image
+          source={{ uri: meal.strMealThumb }}
           style={{
             height: "80%",
-            // width: index % 3 == 0 ? wp(30) : wp(50),
             width: wp(50),
             borderRadius: 20,
           }}
         />
-        <Text>
+        {/* RECIPE NAME */}
+        <Text style={{ color: isDarkMode ? "white" : "black" }}>
           {meal.strMeal.length > 20
             ? meal.strMeal.slice(0, 22) + "...."
             : meal.strMeal}
@@ -143,6 +135,6 @@ const RecipeCard = ({ meal, index, nav }) => {
       </Pressable>
     </Animated.View>
   );
-};
+});
 
-const styles = StyleSheet.create({});
+export default memo(Recipe);

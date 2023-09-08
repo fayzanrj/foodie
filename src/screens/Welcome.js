@@ -1,30 +1,36 @@
-import { Image, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Image, StatusBar, StyleSheet, Text, View } from "react-native";
 import React, { useEffect } from "react";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import { useNavigation } from "@react-navigation/native";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 
 const Welcome = () => {
   const nav = useNavigation();
 
+  // to navigate to the home screen
   useEffect(() => {
     setTimeout(() => {
       nav.navigate("Home");
-    }, 2000);
+    }, 4000);
   });
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View>
+    <View style={styles.container}>
+      <StatusBar backgroundColor={"#f3920c"} />
+      <Animated.View entering={FadeInDown.duration(2000).easing()} >
         <Image
           source={require("../../assets/welcome-img.png")}
           style={{ width: wp(80), height: hp(40) }}
         />
-      </View>
-      <Text style={styles.title}>FOODIE</Text>
-      <Text style={styles.punch}>MAKE YOUR OWN FOOD!</Text>
-    </SafeAreaView>
+      </Animated.View>
+      <Animated.View entering={FadeInUp.duration(2000).easing()}>
+        <Text style={styles.title}>FOODIE</Text>
+        <Text style={styles.punch}>MAKE YOUR OWN FOOD!</Text>
+      </Animated.View>
+    </View>
   );
 };
 
@@ -40,11 +46,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: hp(8),
     color: "white",
-    // fontFamily: "monospace",
   },
   punch: {
     fontSize: hp(2.35),
     color: "white",
-    // fontFamily :
   },
 });

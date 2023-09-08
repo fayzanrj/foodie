@@ -2,8 +2,6 @@ import {
   FlatList,
   Image,
   Keyboard,
-  Platform,
-  Pressable,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -11,93 +9,154 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
-import { Feather } from "@expo/vector-icons";
 import { AntDesign } from "@expo/vector-icons";
 import Animated, { FadeInLeft } from "react-native-reanimated";
 import CategoryListItem from "../components/CategoryListItem";
-import { categoryData } from "../constants";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import Recipe from "../components/Recipe";
 import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import categories from "../constants/categories";
+import initialRecipes from "../constants/initialRecipes";
 
 const Home = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [categories, setCategories] = useState();
   const [searchTxt, setSearchTxt] = useState();
   const [isloading, setIsLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
-  const nav = useNavigation()
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const getCategories = async () => {
-    const response = await axios(
-      "https://themealdb.com/api/json/v1/1/categories.php"
-    );
-    if (response && response.data) {
-      setCategories(response.data.categories);
-    }
-  };
-
+  // FUNCTION TO SEARCH RECIPES
   const searchRecipe = async () => {
     Keyboard.dismiss();
+    setSelectedCategory("");
     setIsLoading(true);
-    const response = await axios(
-      `https://themealdb.com/api/json/v1/1/search.php?s=${searchTxt}`
-    );
-    const response1 = await axios(
-      `https://themealdb.com/api/json/v1/1/search.php?f=${searchTxt[0]}`
-    );
-    if (response && response.data) {
-      if (response.data.meals.length > 0) {
-        const allRecipes = response.data.meals.concat(response1.data.meals);
-        setRecipes(allRecipes);
-      } else {
-        setRecipes(response1.data.meals);
+    try {
+      const response = await axios(
+        `https://themealdb.com/api/json/v1/1/search.php?s=${searchTxt}`
+      );
+      const response1 = await axios(
+        `https://themealdb.com/api/json/v1/1/search.php?f=${searchTxt[0]}`
+      );
+      if (response && response.data) {
+        if (response.data.meals.length > 0) {
+          const allRecipes = response.data.meals.concat(response1.data.meals);
+          setRecipes(allRecipes);
+        } else {
+          setRecipes(response1.data.meals);
+        }
+        setIsLoading(false);
       }
+    } catch {
+      setRecipes([]);
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    getCategories();
+  // FUNCTION TO GET RECIPE FOR A SPECIFIC SELECTED CATEGORY
+  const getRecipes = useCallback(async (name) => {
+    try {
+      setSearchTxt(" ");
+      setSelectedCategory(name);
+      setIsLoading(true);
+      const response = await axios(
+        `https://themealdb.com/api/json/v1/1/filter.php?c=${name}`
+      );
+      if (response && response.data) {
+        await setRecipes(response.data.meals);
+        setIsLoading(false);
+      }
+    } catch {
+      setRecipes(initialRecipes);
+      setIsLoading(false);
+    }
   }, []);
 
-  const punch1Font = useWindowDimensions().fontScale > 1 ? hp(3.5) : hp(4.5);
+  // FUNCTION TO SAVE USER PREFERENCE THEME
+  const setDarkMode = useCallback(async () => {
+    setIsDarkMode(!isDarkMode);
+    isDarkMode
+      ? await AsyncStorage.setItem("theme", "light")
+      : await AsyncStorage.setItem("theme", "dark");
+  });
+
+  // FUCTION TO GET USER PREFERECED THEME
+  const getTheme = async () => {
+    try {
+      const theme = await AsyncStorage.getItem("theme");
+      if (theme) {
+        theme === "dark" ? setIsDarkMode(true) : setIsDarkMode(false);
+      }
+    } catch {
+      setIsDarkMode(false);
+    }
+  };
+
+  // USE EFFECT
+  useEffect(() => {
+    getTheme();
+  }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, alignItems: "center", overflow: "scroll" }}>
-      <StatusBar backgroundColor={'white'} barStyle={"dark-content"} />
-      <Animated.View style={styles.topBar}>
-        <Pressable>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        alignItems: "center",
+        overflow: "scroll",
+        backgroundColor: isDarkMode ? "black" : "white",
+      }}
+    >
+      <StatusBar
+        backgroundColor={isDarkMode ? "black" : "white"}
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
+      {/* TOP BAR i.e. THEME AND LOGO */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={{ width: wp(15), height: hp(6) }}
+          onPress={() => setDarkMode()}
+        >
+          <Ionicons
+            name="bulb"
+            size={hp(4.5)}
+            color={isDarkMode ? "white" : "black"}
+          />
+        </TouchableOpacity>
+        <View>
           <Image
             source={require("../../assets/welcome-img.png")}
             style={{ width: wp(12), height: hp(6.5) }}
           />
-        </Pressable>
-        {/* <TouchableOpacity onPress={() => nav.navigate("Favourites")}>
-          <MaterialCommunityIcons
-            name="cards-heart"
-            size={hp(4.5)}
-            color={"red"}
-          />
-        </TouchableOpacity> */}
-      </Animated.View>
+        </View>
+      </View>
+
+      {/* GRETTING AND PUNCH LINES */}
       <View style={{ paddingHorizontal: "4%", marginTop: "8%" }}>
-        <Text style={styles.welcome}>Welcome back!</Text>
+        <Text style={{ color: isDarkMode ? "#c9c8c5" : "#636361" }}>
+          Welcome back!
+        </Text>
         <View style={{ marginTop: "5%" }}>
-          <Text style={styles.punch}>Make your own food,</Text>
-          <Text style={styles.punch2}>
+          <Text
+            style={[styles.punch, { color: isDarkMode ? "white" : "black" }]}
+          >
+            Make your own food,
+          </Text>
+          <Text
+            style={[styles.punch2, { color: isDarkMode ? "white" : "black" }]}
+          >
             with your <Text style={styles.punch3}>own hands</Text>
           </Text>
         </View>
       </View>
+
+      {/* SEARCH SECTION */}
       <View style={styles.searchView}>
         <TextInput
           placeholder="Search a recipe"
@@ -114,6 +173,8 @@ const Home = () => {
           <AntDesign name="search1" size={24} color="black" />
         </TouchableOpacity>
       </View>
+
+      {/* CATEGORY LIST  */}
       <View style={styles.flatListParent}>
         {categories && (
           <Animated.View entering={FadeInLeft.duration(1000).springify()}>
@@ -130,13 +191,16 @@ const Home = () => {
                   categoryName={item.strCategory}
                   categoryImg={item.strCategoryThumb}
                   selectedCategory={selectedCategory}
-                  setSelectedCategory={setSelectedCategory}
+                  getRecipes={getRecipes}
+                  isDarkMode={isDarkMode}
                 />
               )}
             />
           </Animated.View>
         )}
       </View>
+
+      {/* RECIPE LIST SECTION */}
       <View style={{ flex: 1, width: "100%", overflow: "scroll" }}>
         <Recipe
           recipes={recipes}
@@ -145,41 +209,36 @@ const Home = () => {
           setSelectedCategory={setSelectedCategory}
           setIsLoading={setIsLoading}
           isloading={isloading}
+          isDarkMode={isDarkMode}
         />
       </View>
     </SafeAreaView>
   );
 };
 
-export default Home;
+export default memo(Home);
 
 const styles = StyleSheet.create({
   topBar: {
     width: "100%",
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: "2%",
-    // marginTop: Platform.OS == "android" ? StatusBar.currentHeight  : 0,
-  },
-  welcome: {
-    color: "#696b6e",
+    paddingHorizontal: "3%",
   },
   punch: {
     fontSize: hp(4.5),
-    fontFamily: "",
   },
   punch2: {
     fontSize: hp(4),
   },
   punch3: {
-    // fontSize :
     color: "#f3920c",
   },
   searchView: {
     width: wp(90),
     height: hp(6),
-    backgroundColor: "#c3c5c7",
+    backgroundColor: "#5c5c5b",
     marginTop: "8%",
     borderRadius: 35,
     flexDirection: "row",
@@ -191,6 +250,7 @@ const styles = StyleSheet.create({
     height: "100%",
     paddingHorizontal: "4%",
     color: "white",
+    fontSize: hp(2.2),
   },
   searchBtn: {
     backgroundColor: "white",
@@ -202,7 +262,5 @@ const styles = StyleSheet.create({
     height: "10%",
     marginTop: "5%",
     paddingHorizontal: "2%",
-    // justifyContent: "center",
-    // alignItems: "center",
   },
 });

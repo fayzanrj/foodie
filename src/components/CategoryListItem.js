@@ -1,21 +1,23 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import React from "react";
+import React, { memo, useCallback } from "react";
 import { TouchableOpacity } from "react-native";
-import { categoryData } from "../constants";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
-import { CachedImage } from "../helper/image";
 
 const CategoryListItem = ({
   categoryName,
   categoryImg,
   selectedCategory,
-  setSelectedCategory,
+  getRecipes,
+  isDarkMode,
 }) => {
-  let isActive = categoryName === selectedCategory;
-  let backgroundColor = isActive ? "#f3920c" : null;
+  // checking is activated and giving background color
+  let backgroundColor = categoryName === selectedCategory ? "#f3920c" : null;
+
+  // callback function to get recipe
+  const getRecipes1 = useCallback((name) => getRecipes(name), []);
   return (
     categoryName != "Pork" && (
       <TouchableOpacity
@@ -24,34 +26,31 @@ const CategoryListItem = ({
           alignItems: "center",
           marginHorizontal: 8,
         }}
-        onPress={() => setSelectedCategory(categoryName)}
+        onPress={() => getRecipes1(categoryName)}
       >
+        {/* CATEGORY IMAGE */}
         <View
           style={{
             backgroundColor: backgroundColor,
             width: 50,
             height: 50,
-            overflow: "hidden",
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 50,
           }}
         >
-          {/* <Image
-            source={{ uri: categoryImg }}
-            style={{ width: wp(14), height: hp(5), marginBottom: 2 }}
-          /> */}
-          <CachedImage
-            uri={categoryImg}
+          <Image
+          source={{uri : categoryImg}}
             style={{ width: wp(14), height: hp(5), marginBottom: 2 }}
           />
         </View>
-        <Text>{categoryName}</Text>
+
+        {/* CATEGORY NAME */}
+        <Text style={{ color: isDarkMode ? "white" : "black" }}>
+          {categoryName}
+        </Text>
       </TouchableOpacity>
     )
   );
 };
-
-export default CategoryListItem;
-
-const styles = StyleSheet.create({});
+export default memo(CategoryListItem);
